@@ -46,8 +46,8 @@ fn write_result_file(json_str: String) -> io::Result<()> {
     Ok(())
 }
 
-fn test_one(exec_command: &String, exec_args: &[String],
-            index: u32, time_limit: u32, space_limit: u32) -> TestResult {
+fn test_one<'a>(exec_command: &'a String, exec_args: &'a [String],
+            index: u32, time_limit: u32, space_limit: u32) -> TestResult<'static> {
     let result = TestResult {
         case_id: index,
         status: consts::STATUS_OK,
