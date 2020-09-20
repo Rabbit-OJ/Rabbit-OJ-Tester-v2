@@ -1,6 +1,4 @@
 use std::env;
-mod utils;
-mod path;
 
 fn main() {
     let case_count = env::var("CASE_COUNT").unwrap().parse::<u32>().unwrap();
