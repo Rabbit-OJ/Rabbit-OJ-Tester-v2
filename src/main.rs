@@ -26,7 +26,7 @@ fn main() {
         file::chmod(exec_command_name.as_str(), 0o755);
     }
 
-    let mut test_result: Vec<TestResult> = vec![];
+    let mut test_result: Vec<TestResult<'static>> = vec![];
     for i in 1..case_count {
         println!("Testing Case #{} ...", i);
         let result = test_one(exec_command_name, exec_args, i, time_limit, space_limit);
@@ -46,7 +46,7 @@ fn write_result_file(json_str: String) -> io::Result<()> {
     Ok(())
 }
 
-fn test_one<'a>(exec_command: &'a String, exec_args: &'a [String],
+fn test_one(exec_command: &String, exec_args: &[String],
             index: u32, time_limit: u32, space_limit: u32) -> TestResult<'static> {
     let result = TestResult {
         case_id: index,
