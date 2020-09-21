@@ -23,6 +23,17 @@ async fn main() {
     let time_limit = env::var("TIME_LIMIT").unwrap().parse::<u64>().unwrap();
     let space_limit = env::var("SPACE_LIMIT").unwrap().parse::<u64>().unwrap();
     let exec_command = env::var("EXEC_COMMAND").unwrap();
+    let mut dev_mode = false;
+    if let Ok(_) = env::var("DEV") {
+        dev_mode = true;
+    }
+
+    if dev_mode {
+        println!("[DEV] ENV CASE_COUNT = {}", case_count);
+        println!("[DEV] ENV TIME_LIMIT = {}", time_limit);
+        println!("[DEV] ENV SPACE_LIMIT = {}", space_limit);
+        println!("[DEV] ENV EXEC_COMMAND = {}", exec_command);
+    }
 
     checks::test_cases::count(case_count);
     let exec_command_vec = checks::env::exec_command(exec_command.as_str());
@@ -40,7 +51,7 @@ async fn main() {
         let mut command = Command::new(exec_command_name);
         command.args(exec_args);
 
-        let result = test_one(command, i, time_limit, space_limit).await;
+        let result = test_one(command, i, time_limit, space_limit, dev_mode).await;
         test_result.push(result);
     }
 
@@ -49,7 +60,7 @@ async fn main() {
     std::process::exit(0);
 }
 
-async fn test_one(mut command: Command, index: u32, time_limit: u64, space_limit: u64) -> TestResult<'static> {
+async fn test_one(mut command: Command, index: u32, time_limit: u64, space_limit: u64, dev_mode: bool) -> TestResult<'static> {
     let mut result = TestResult {
         case_id: index,
         status: consts::STATUS_OK,
@@ -91,10 +102,14 @@ async fn test_one(mut command: Command, index: u32, time_limit: u64, space_limit
     let time_future = time_watch_thread(time_limit).boxed();
 
     let status = future::select_all(vec![main_future, memory_future, time_future]).await.0;
+    if dev_mode {
+        println!("[DEV] case = {}, status = {}", index, status);
+    }
     let end_time = time::now_unix();
 
     let space_used = peak_memory.read().unwrap();
     result.space_used = *space_used;
+    drop(space_used);
 
     result.time_used = (end_time - start_time) as u64;
     result.status = status;
@@ -136,15 +151,21 @@ async fn memory_watch_thread(pid: i32, memory_limit: u64, peak_memory: Arc<RwLoc
     loop {
         system.refresh_all();
         let memory_process_result = system.get_process(pid);
-        if let Some(memory_usage) = memory_process_result {
-            let current_memory = memory_usage.memory();
+        match memory_process_result {
+            Some(memory_usage) => {
+                let current_memory = memory_usage.memory();
 
-            let mut memory = peak_memory.write().unwrap();
-            *memory = max(current_memory, *memory);
-            drop(memory);
+                let mut memory = peak_memory.write().unwrap();
+                *memory = max(current_memory, *memory);
+                drop(memory);
 
-            if current_memory > memory_limit {
-                return consts::STATUS_MLE;
+                if current_memory > memory_limit {
+                    return consts::STATUS_MLE;
+                }
+            },
+            None => {
+                println!("[ERROR] Process exited. ");
+                return consts::STATUS_RE;
             }
         }
     }
