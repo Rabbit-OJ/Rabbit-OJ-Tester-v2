@@ -3,3 +3,7 @@
 /tester
 **/.DS_Store
 /.vscode
+/case
+/output
+/result
+/test/*.o

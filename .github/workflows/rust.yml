@@ -33,5 +33,6 @@ jobs:
         g++ ./test/ac.cpp -O2 -std=c++17 -o ./test/ac
         g++ ./test/re.cpp -O2 -std=c++17 -o ./test/re
         g++ ./test/wa.cpp -O2 -std=c++17 -o ./test/wa
+        g++ ./test/tle.cpp -O2 -std=c++17 -o ./test/tle
     - name: Run tests
       run: cargo test --verbose

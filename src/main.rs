@@ -97,11 +97,11 @@ async fn test_one(mut command: Command, index: u32, time_limit: u64, space_limit
         setpgid_success = false;
     }
 
-    let main_future = main_thread(child_process).boxed();
-    let memory_future = memory_watch_thread(child_pid as i32, space_limit, peak_memory.clone()).boxed();
-    let time_future = time_watch_thread(time_limit).boxed();
+    let main_future = main_future(child_process).boxed();
+    // let memory_future = memory_watch_thread(child_pid as i32, space_limit, peak_memory.clone()).boxed();
+    let time_future = time_watch_future(time_limit).boxed();
 
-    let status = future::select_all(vec![main_future, memory_future, time_future]).await.0;
+    let status = future::select_all(vec![main_future, time_future]).await.0;
     if dev_mode {
         println!("[DEV] case = {}, status = {}", index, status);
     }
@@ -128,8 +128,11 @@ async fn test_one(mut command: Command, index: u32, time_limit: u64, space_limit
     result
 }
 
-async fn main_thread(mut child_process: Child) -> &'static str {
-    let output = child_process.wait();
+async fn main_future(mut child_process: Child) -> &'static str {
+    let output = tokio::task::spawn_blocking(move || {
+        return child_process.wait();
+    }).await.unwrap();
+
     if let Ok(status) = output {
         if status.success() {
             return consts::STATUS_OK;
@@ -139,12 +142,12 @@ async fn main_thread(mut child_process: Child) -> &'static str {
     return consts::STATUS_RE;
 }
 
-async fn time_watch_thread(time_limit: u64) -> &'static str {
+async fn time_watch_future(time_limit: u64) -> &'static str {
     tokio::time::delay_for(Duration::from_millis(time_limit)).await;
-    consts::STATUS_TLE
+    return consts::STATUS_TLE;
 }
 
-async fn memory_watch_thread(pid: i32, memory_limit: u64, peak_memory: Arc<RwLock<u64>>) -> &'static str {
+async fn memory_watch_future(pid: i32, memory_limit: u64, peak_memory: Arc<RwLock<u64>>) -> &'static str {
     let refresh_kind = sysinfo::RefreshKind::new().with_memory();
     let mut system = sysinfo::System::new_with_specifics(refresh_kind);
 
@@ -168,5 +171,23 @@ async fn memory_watch_thread(pid: i32, memory_limit: u64, peak_memory: Arc<RwLoc
                 return consts::STATUS_RE;
             }
         }
+
+        tokio::time::delay_for(Duration::from_millis(50)).await;
     }
 }
+//
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
+//
+//     #[test]
+//     fn test_tle() {
+//         env::set_var("CASE_COUNT", "2");
+//         env::set_var("TIME_LIMIT", "1000");
+//         env::set_var("SPACE_LIMIT", "128");
+//         env::set_var("EXEC_COMMAND", "[\"./test/tle.o\"]");
+//         env::set_var("DEV", "1");
+//
+//         main();
+//     }
+// }
