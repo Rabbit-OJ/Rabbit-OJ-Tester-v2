@@ -19,15 +19,15 @@ jobs:
     - name: Install MUSL build target
       run: rustup target add x86_64-unknown-linux-musl
     - name: Build without dylib
-      run: cargo build --target x86_64-unknown-linux-musl
-    - name: Initial Files...
+      run: cargo build --target x86_64-unknown-linux-musl --release
+    - name: Docker build
       run: |
-        sudo mkdir -p /result
-        sudo mkdir -p /output
-        sudo mkdir -p /case
+        mkdir -p ./result
+        mkdir -p ./output
+        mkdir -p ./case
 
-        sudo echo "1 2" >> /case/1.in
-        sudo echo "3 5" >> /case/2.in
+        echo "1 2" >> ./case/1.in
+        echo "3 5" >> ./case/2.in
     - name: Build sample programs
       run: |
         g++ ./ac.cpp -O2 -std=c++17 -o ./ac
