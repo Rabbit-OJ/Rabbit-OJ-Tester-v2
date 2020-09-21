@@ -83,7 +83,7 @@ async fn test_one(mut command: Command, index: u32, time_limit: u64, space_limit
     let mut setpgid_success = true;
     if let Err(e) = setpgid(Pid::from_raw(child_pid as i32), Pid::from_raw(child_pid as i32)) {
         println!("[WARNING] setpgid syscall executed error due to {}, child_pid = {}", e, child_pid);
-        setpgid_succes = false;
+        setpgid_success = false;
     }
 
     let main_future = main_thread(child_process).boxed();
