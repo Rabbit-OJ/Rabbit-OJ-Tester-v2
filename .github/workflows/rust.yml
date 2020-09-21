@@ -16,6 +16,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+    - name: Install MUSL build target
+      run: rustup target add x86_64-unknown-linux-musl
     - name: Build without dylib
       run: cargo build --target x86_64-unknown-linux-musl --release
     - name: Run tests
