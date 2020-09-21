@@ -30,8 +30,8 @@ jobs:
         echo "3 5" >> ./case/2.in
     - name: Build sample programs
       run: |
-        g++ ./ac.cpp -O2 -std=c++17 -o ./ac
-        g++ ./re.cpp -O2 -std=c++17 -o ./re
-        g++ ./wa.cpp -O2 -std=c++17 -o ./wa
+        g++ ./test/ac.cpp -O2 -std=c++17 -o ./test/ac
+        g++ ./test/re.cpp -O2 -std=c++17 -o ./test/re
+        g++ ./test/wa.cpp -O2 -std=c++17 -o ./test/wa
     - name: Run tests
       run: cargo test --verbose
