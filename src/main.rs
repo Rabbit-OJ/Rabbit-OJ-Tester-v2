@@ -1,5 +1,4 @@
 use std::{env, thread};
-use std::io::Write;
 use std::process::{Child, Command};
 use nix::unistd::{Pid, setpgid};
 
@@ -8,12 +7,12 @@ mod checks;
 mod types;
 
 use types::TestResult;
-use utils::{consts, file, time, memory};
+use utils::{consts, file, time};
 use utils::file::{create_stdout_file, open_stdin_file, write_result_file};
 use std::sync::{mpsc, Arc, Mutex, RwLock};
 use std::sync::mpsc::Sender;
-use std::time::Duration;
 use sysinfo::{ProcessExt, SystemExt};
+use std::time::Duration;
 
 fn main() {
     let case_count = env::var("CASE_COUNT").unwrap().parse::<u32>().unwrap();
@@ -89,7 +88,7 @@ fn memory_watch_thread(pid: i32, memory_limit: u64, status_tx: Sender<&'static s
 
         loop {
             {
-                let mut locked_state = ctx.lock().unwrap();
+                let locked_state = ctx.lock().unwrap();
                 if *locked_state == false {
                     return;
                 }
@@ -131,7 +130,7 @@ fn test_one(mut command: Command, index: u32, time_limit: u64, space_limit: u64)
         space_used: 0,
     };
 
-    let mut peak_memory: Arc<RwLock<u64>> = Arc::new(RwLock::new(0));
+    let peak_memory: Arc<RwLock<u64>> = Arc::new(RwLock::new(0));
     let child_process: Child;
 
     let stdin_file = open_stdin_file(index).unwrap();
