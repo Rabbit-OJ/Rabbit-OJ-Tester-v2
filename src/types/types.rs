@@ -1,10 +1,9 @@
-use serde::{Serialize};
-use serde_json::Result;
+use serde::Serialize;
 
 #[derive(Serialize)]
 pub struct TestResult<'a> {
     pub case_id: u32,
     pub status: &'a str,
-    pub time_used: u32,
-    pub space_used: u32,
+    pub time_used: u64,
+    pub space_used: u64,
 }
