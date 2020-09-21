@@ -17,6 +17,6 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Build without dylib
-      run: ./build.sh
+      run: cargo build --target x86_64-unknown-linux-musl --release
     - name: Run tests
       run: cargo test --verbose
