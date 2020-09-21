@@ -19,6 +19,19 @@ jobs:
     - name: Install MUSL build target
       run: rustup target add x86_64-unknown-linux-musl
     - name: Build without dylib
-      run: cargo build --target x86_64-unknown-linux-musl --release
+      run: cargo build --target x86_64-unknown-linux-musl
+    - name: Initial Files...
+      run: |
+        sudo mkdir -p /result
+        sudo mkdir -p /output
+        sudo mkdir -p /case
+
+        sudo echo "1 2" >> /case/1.in
+        sudo echo "3 5" >> /case/2.in
+    - name: Build sample programs
+      run: |
+        g++ ./ac.cpp -O2 -std=c++17 -o ./ac
+        g++ ./re.cpp -O2 -std=c++17 -o ./re
+        g++ ./wa.cpp -O2 -std=c++17 -o ./wa
     - name: Run tests
       run: cargo test --verbose
