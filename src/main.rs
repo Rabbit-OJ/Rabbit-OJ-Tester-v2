@@ -101,7 +101,11 @@ async fn test_one(mut command: Command, index: u32, time_limit: u64, space_limit
     let memory_future = memory_watch_future(child_pid as i32, space_limit, peak_memory.clone()).boxed();
     let time_future = time_watch_future(time_limit).boxed();
 
-    let status = future::select_all(vec![main_future, memory_future, time_future]).await.0;
+    let mut status = future::select_all(vec![main_future, memory_future, time_future]).await.0;
+    if status == consts::STATUS_CONTINUE { // in case of memory_future first emit before other process
+        status = future::select_all(vec![main_future, time_future]).await.0;
+    }
+
     if dev_mode {
         println!("[DEV] case = {}, status = {}", index, status);
     }
@@ -168,7 +172,7 @@ async fn memory_watch_future(pid: i32, memory_limit: u64, peak_memory: Arc<RwLoc
             }
             None => {
                 println!("[ERROR] Process exited. ");
-                return consts::STATUS_RE;
+                return consts::STATUS_CONTINUE;
             }
         }
 
