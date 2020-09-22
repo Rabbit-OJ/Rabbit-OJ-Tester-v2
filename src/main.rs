@@ -98,10 +98,10 @@ async fn test_one(mut command: Command, index: u32, time_limit: u64, space_limit
     }
 
     let main_future = main_future(child_process).boxed();
-    // let memory_future = memory_watch_thread(child_pid as i32, space_limit, peak_memory.clone()).boxed();
+    let memory_future = memory_watch_future(child_pid as i32, space_limit, peak_memory.clone()).boxed();
     let time_future = time_watch_future(time_limit).boxed();
 
-    let status = future::select_all(vec![main_future, time_future]).await.0;
+    let status = future::select_all(vec![main_future, memory_future, time_future]).await.0;
     if dev_mode {
         println!("[DEV] case = {}, status = {}", index, status);
     }
@@ -156,7 +156,7 @@ async fn memory_watch_future(pid: i32, memory_limit: u64, peak_memory: Arc<RwLoc
         let memory_process_result = system.get_process(pid);
         match memory_process_result {
             Some(memory_usage) => {
-                let current_memory = memory_usage.memory() + memory_usage.virtual_memory();
+                let current_memory = memory_usage.memory();
 
                 let mut memory = peak_memory.write().unwrap();
                 *memory = max(current_memory, *memory);
