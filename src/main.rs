@@ -21,7 +21,7 @@ mod types;
 async fn main() {
     let case_count = env::var("CASE_COUNT").unwrap().parse::<u32>().unwrap();
     let time_limit = env::var("TIME_LIMIT").unwrap().parse::<u64>().unwrap();
-    let space_limit = env::var("SPACE_LIMIT").unwrap().parse::<u64>().unwrap();
+    let space_limit = env::var("SPACE_LIMIT").unwrap().parse::<u64>().unwrap() * 1024;
     let exec_command = env::var("EXEC_COMMAND").unwrap();
     let mut dev_mode = false;
     if let Ok(_) = env::var("DEV") {
@@ -156,7 +156,7 @@ async fn memory_watch_future(pid: i32, memory_limit: u64, peak_memory: Arc<RwLoc
         let memory_process_result = system.get_process(pid);
         match memory_process_result {
             Some(memory_usage) => {
-                let current_memory = memory_usage.memory();
+                let current_memory = memory_usage.memory() + memory_usage.virtual_memory();
 
                 let mut memory = peak_memory.write().unwrap();
                 *memory = max(current_memory, *memory);
@@ -165,7 +165,7 @@ async fn memory_watch_future(pid: i32, memory_limit: u64, peak_memory: Arc<RwLoc
                 if current_memory > memory_limit {
                     return consts::STATUS_MLE;
                 }
-            },
+            }
             None => {
                 println!("[ERROR] Process exited. ");
                 return consts::STATUS_RE;
