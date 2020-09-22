@@ -101,9 +101,9 @@ async fn test_one(mut command: Command, index: u32, time_limit: u64, space_limit
     let memory_future = memory_watch_future(child_pid as i32, space_limit, peak_memory.clone()).boxed();
     let time_future = time_watch_future(time_limit).boxed();
 
-    let mut status = future::select_all(vec![main_future, memory_future, time_future]).await.0;
-    if status == consts::STATUS_CONTINUE { // in case of memory_future first emit before other process
-        status = future::select_all(vec![main_future, time_future]).await.0;
+    let (mut status, _, future_list) = future::select_all(vec![main_future, memory_future, time_future]).await;
+    if status == consts::STATUS_CONTINUE {
+        status = future::select_all(future_list).await.0;
     }
 
     if dev_mode {
@@ -179,19 +179,19 @@ async fn memory_watch_future(pid: i32, memory_limit: u64, peak_memory: Arc<RwLoc
         tokio::time::delay_for(Duration::from_millis(50)).await;
     }
 }
-//
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//
-//     #[test]
-//     fn test_tle() {
-//         env::set_var("CASE_COUNT", "2");
-//         env::set_var("TIME_LIMIT", "1000");
-//         env::set_var("SPACE_LIMIT", "128");
-//         env::set_var("EXEC_COMMAND", "[\"./test/tle.o\"]");
-//         env::set_var("DEV", "1");
-//
-//         main();
-//     }
-// }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_tle() {
+        env::set_var("CASE_COUNT", "2");
+        env::set_var("TIME_LIMIT", "1000");
+        env::set_var("SPACE_LIMIT", "128");
+        env::set_var("EXEC_COMMAND", "[\"./test/tle.o\"]");
+        env::set_var("DEV", "1");
+
+        main();
+    }
+}
