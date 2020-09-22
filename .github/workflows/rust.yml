@@ -30,9 +30,8 @@ jobs:
         echo "3 5" >> ./case/2.in
     - name: Build sample programs
       run: |
-        g++ ./test/ac.cpp -O2 -std=c++17 -o ./test/ac.o
+        g++ ./test/ok.cpp -O2 -std=c++17 -o ./test/ok.o
         g++ ./test/re.cpp -O2 -std=c++17 -o ./test/re.o
-        g++ ./test/wa.cpp -O2 -std=c++17 -o ./test/wa.o
         g++ ./test/tle.cpp -O2 -std=c++17 -o ./test/tle.o
         g++ ./test/mle.cpp -O2 -std=c++17 -o ./test/mle.o
     - name: Run tests

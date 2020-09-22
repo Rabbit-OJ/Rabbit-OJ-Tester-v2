@@ -35,6 +35,15 @@ async fn main() {
         println!("[DEV] ENV EXEC_COMMAND = {}", exec_command);
     }
 
+    let test_result = start_test(case_count, time_limit, space_limit, exec_command, dev_mode).await;
+
+    let test_result_json_str = serde_json::to_string(&test_result).unwrap();
+    write_result_file(test_result_json_str).unwrap();
+    std::process::exit(0);
+}
+
+async fn start_test(case_count: u32, time_limit: u64, space_limit: u64, exec_command: String, dev_mode: bool)
+                    -> Vec<TestResult<'static>> {
     checks::test_cases::count(case_count);
     let exec_command_vec = checks::env::exec_command(exec_command.as_str());
 
@@ -55,9 +64,7 @@ async fn main() {
         test_result.push(result);
     }
 
-    let test_result_json_str = serde_json::to_string(&test_result).unwrap();
-    write_result_file(test_result_json_str).unwrap();
-    std::process::exit(0);
+    test_result
 }
 
 async fn test_one(mut command: Command, index: u32, time_limit: u64, space_limit: u64, dev_mode: bool) -> TestResult<'static> {
@@ -171,7 +178,7 @@ async fn memory_watch_future(pid: i32, memory_limit: u64, peak_memory: Arc<RwLoc
                 }
             }
             None => {
-                println!("[ERROR] Process exited. ");
+                println!("[INFO] (memory watch) Process exited.");
                 return consts::STATUS_CONTINUE;
             }
         }
@@ -184,14 +191,36 @@ async fn memory_watch_future(pid: i32, memory_limit: u64, peak_memory: Arc<RwLoc
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_tle() {
-        env::set_var("CASE_COUNT", "2");
-        env::set_var("TIME_LIMIT", "1000");
-        env::set_var("SPACE_LIMIT", "128");
-        env::set_var("EXEC_COMMAND", "[\"./test/tle.o\"]");
-        env::set_var("DEV", "1");
+    async fn test_executor(filename: &str, eq_status: &'static str) {
+        let exec_command = format!("[\"./test/{}.o\"]", filename);
 
-        main();
+        env::set_var("DEV", "1");
+        let test_result = start_test(2, 1000, 128 * 1024,
+                                     exec_command, true).await;
+
+        assert_eq!(test_result.len(), 2);
+        for one_case in test_result.iter() {
+            assert_eq!(one_case.status, eq_status);
+        }
+    }
+
+    #[tokio::test(threaded_scheduler)]
+    async fn test_tle() {
+        test_executor("tle", consts::STATUS_TLE).await;
+    }
+
+    #[tokio::test(threaded_scheduler)]
+    async fn test_mle() {
+        test_executor("mle", consts::STATUS_MLE).await;
+    }
+
+    #[tokio::test(threaded_scheduler)]
+    async fn test_ok() {
+        test_executor("ok", consts::STATUS_OK).await;
+    }
+
+    #[tokio::test(threaded_scheduler)]
+    async fn test_re() {
+        test_executor("re", consts::STATUS_RE).await;
     }
 }
