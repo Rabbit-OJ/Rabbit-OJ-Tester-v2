@@ -3,10 +3,10 @@ use std::process::{Child, Command};
 use std::sync::{Arc, RwLock};
 use sysinfo::{ProcessExt, SystemExt};
 use std::time::Duration;
-use futures::{future};
+use futures::future;
 use futures::future::FutureExt;
 use nix::sys::signal::{self, Signal};
-use nix::unistd::{Pid};
+use nix::unistd::Pid;
 
 use types::TestResult;
 use utils::{consts, file, time};
@@ -125,8 +125,8 @@ async fn test_one(mut command: Command, index: u32, time_limit: u64, space_limit
     result.time_used = (end_time - start_time) as u64;
     result.status = status;
     if result.status != consts::STATUS_OK {
-        if let Err(e) = signal::killpg(Pid::from_raw(child_pid as i32), Signal::SIGKILL) {
-            println!("[WARNING] Error when sending SIGKILL to process group {}, {}", child_pid, e)
+        if let Err(e) = signal::kill(Pid::from_raw(child_pid as i32), Signal::SIGKILL) {
+            println!("[WARNING] Error when sending SIGKILL to process {}, {}", child_pid, e)
         }
 
         // if setpgid_success {
