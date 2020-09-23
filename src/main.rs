@@ -6,7 +6,7 @@ use std::time::Duration;
 use futures::{future};
 use futures::future::FutureExt;
 use nix::sys::signal::{self, Signal};
-use nix::unistd::{Pid, setpgid};
+use nix::unistd::{Pid};
 
 use types::TestResult;
 use utils::{consts, file, time};
@@ -98,11 +98,11 @@ async fn test_one(mut command: Command, index: u32, time_limit: u64, space_limit
     let start_time = time::now_unix();
     let child_pid = child_process.id();
 
-    let mut setpgid_success = true;
-    if let Err(e) = setpgid(Pid::from_raw(child_pid as i32), Pid::from_raw(child_pid as i32)) {
-        println!("[WARNING] setpgid syscall executed error due to {}, child_pid = {}", e, child_pid);
-        setpgid_success = false;
-    }
+    // let mut setpgid_success = true;
+    // if let Err(e) = setpgid(Pid::from_raw(child_pid as i32), Pid::from_raw(child_pid as i32)) {
+    //     println!("[WARNING] setpgid syscall executed error due to {}, child_pid = {}", e, child_pid);
+    //     setpgid_success = false;
+    // }
 
     let main_future = main_future(child_process).boxed();
     let memory_future = memory_watch_future(child_pid as i32, space_limit, peak_memory.clone()).boxed();
@@ -125,15 +125,19 @@ async fn test_one(mut command: Command, index: u32, time_limit: u64, space_limit
     result.time_used = (end_time - start_time) as u64;
     result.status = status;
     if result.status != consts::STATUS_OK {
-        if setpgid_success {
-            if let Err(e) = signal::killpg(Pid::from_raw(child_pid as i32), Signal::SIGKILL) {
-                println!("[WARNING] Error when sending SIGKILL to process group {}, {}", child_pid, e)
-            }
-        } else { // fallback
-            if let Err(e) = signal::kill(Pid::from_raw(child_pid as i32), Signal::SIGKILL) {
-                println!("[WARNING] Error when sending SIGKILL to process {}, {}", child_pid, e)
-            }
+        if let Err(e) = signal::killpg(Pid::from_raw(child_pid as i32), Signal::SIGKILL) {
+            println!("[WARNING] Error when sending SIGKILL to process group {}, {}", child_pid, e)
         }
+
+        // if setpgid_success {
+        //     if let Err(e) = signal::killpg(Pid::from_raw(child_pid as i32), Signal::SIGKILL) {
+        //         println!("[WARNING] Error when sending SIGKILL to process group {}, {}", child_pid, e)
+        //     }
+        // } else { // fallback
+        //     if let Err(e) = signal::kill(Pid::from_raw(child_pid as i32), Signal::SIGKILL) {
+        //         println!("[WARNING] Error when sending SIGKILL to process {}, {}", child_pid, e)
+        //     }
+        // }
     }
 
     result
