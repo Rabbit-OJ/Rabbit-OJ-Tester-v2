@@ -56,7 +56,7 @@ async fn start_test(case_count: u32, time_limit: u64, space_limit: u64, exec_com
     }
 
     let mut test_result: Vec<TestResult<'static>> = vec![];
-    for i in 1..(case_count + 1) {
+    for i in 1..=case_count {
         println!("Testing Case #{} ...", i);
         let mut command = Command::new(exec_command_name);
         command.args(exec_args);
