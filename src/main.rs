@@ -1,22 +1,22 @@
-use std::env;
-use std::process::{Child, Command};
-use std::sync::{Arc, RwLock};
-use sysinfo::{ProcessExt, SystemExt};
-use std::time::Duration;
 use futures::future;
 use futures::future::FutureExt;
 use nix::sys::signal::{self, Signal};
-use nix::unistd::{Pid, setpgid};
+use nix::unistd::{setpgid, Pid};
+use std::env;
 use std::os::unix::process::CommandExt;
+use std::process::{Child, Command};
+use std::sync::{Arc, RwLock};
+use std::time::Duration;
+use sysinfo::{ProcessExt, SystemExt};
 
-use types::TestResult;
-use utils::{consts, file, time};
-use utils::file::{create_stdout_file, open_stdin_file, write_result_file};
 use std::cmp::max;
+use types::TestResult;
+use utils::file::{create_stdout_file, open_stdin_file, write_result_file};
+use utils::{consts, file, time};
 
-mod utils;
 mod checks;
 mod types;
+mod utils;
 
 #[tokio::main]
 async fn main() {
@@ -43,8 +43,13 @@ async fn main() {
     std::process::exit(0);
 }
 
-async fn start_test(case_count: u32, time_limit: u64, space_limit: u64, exec_command: String, dev_mode: bool)
-                    -> Vec<TestResult<'static>> {
+async fn start_test(
+    case_count: u32,
+    time_limit: u64,
+    space_limit: u64,
+    exec_command: String,
+    dev_mode: bool,
+) -> Vec<TestResult<'static>> {
     checks::test_cases::count(case_count);
     let exec_command_vec = checks::env::exec_command(exec_command.as_str());
 
@@ -68,7 +73,13 @@ async fn start_test(case_count: u32, time_limit: u64, space_limit: u64, exec_com
     test_result
 }
 
-async fn test_one(mut command: Command, index: u32, time_limit: u64, space_limit: u64, dev_mode: bool) -> TestResult<'static> {
+async fn test_one(
+    mut command: Command,
+    index: u32,
+    time_limit: u64,
+    space_limit: u64,
+    dev_mode: bool,
+) -> TestResult<'static> {
     let mut result = TestResult {
         case_id: index,
         status: consts::STATUS_OK,
@@ -118,10 +129,12 @@ async fn test_one(mut command: Command, index: u32, time_limit: u64, space_limit
     // }
 
     let main_future = main_future(child_process).boxed();
-    let memory_future = memory_watch_future(child_pid as i32, space_limit, peak_memory.clone()).boxed();
+    let memory_future =
+        memory_watch_future(child_pid as i32, space_limit, peak_memory.clone()).boxed();
     let time_future = time_watch_future(time_limit).boxed();
 
-    let (mut status, _, future_list) = future::select_all(vec![main_future, memory_future, time_future]).await;
+    let (mut status, _, future_list) =
+        future::select_all(vec![main_future, memory_future, time_future]).await;
     if status == consts::STATUS_CONTINUE {
         status = future::select_all(future_list).await.0;
     }
@@ -131,19 +144,26 @@ async fn test_one(mut command: Command, index: u32, time_limit: u64, space_limit
     }
     let end_time = time::now_unix();
 
-    let space_used = peak_memory.read().unwrap();
-    result.space_used = *space_used;
-    drop(space_used);
+    {
+        let space_used = peak_memory.read().unwrap();
+        result.space_used = *space_used;
+    }
 
     result.time_used = (end_time - start_time) as u64;
     result.status = status;
     if result.status != consts::STATUS_OK {
         if let Err(e) = signal::killpg(Pid::from_raw(child_pid as i32), Signal::SIGKILL) {
-            println!("[WARNING] Error when sending SIGKILL to process group {}, {}", child_pid, e);
+            println!(
+                "[WARNING] Error when sending SIGKILL to process group {}, {}",
+                child_pid, e
+            );
 
             // fallback
             if let Err(e) = signal::kill(Pid::from_raw(child_pid as i32), Signal::SIGKILL) {
-                println!("[WARNING] Error when sending SIGKILL to process {}, {}", child_pid, e);
+                println!(
+                    "[WARNING] Error when sending SIGKILL to process {}, {}",
+                    child_pid, e
+                );
             }
         }
     }
@@ -154,7 +174,9 @@ async fn test_one(mut command: Command, index: u32, time_limit: u64, space_limit
 async fn main_future(mut child_process: Child) -> &'static str {
     let output = tokio::task::spawn_blocking(move || {
         return child_process.wait();
-    }).await.unwrap();
+    })
+    .await
+    .unwrap();
 
     if let Ok(status) = output {
         if status.success() {
@@ -170,7 +192,11 @@ async fn time_watch_future(time_limit: u64) -> &'static str {
     return consts::STATUS_TLE;
 }
 
-async fn memory_watch_future(pid: i32, memory_limit: u64, peak_memory: Arc<RwLock<u64>>) -> &'static str {
+async fn memory_watch_future(
+    pid: i32,
+    memory_limit: u64,
+    peak_memory: Arc<RwLock<u64>>,
+) -> &'static str {
     let refresh_kind = sysinfo::RefreshKind::new().with_memory();
     let mut system = sysinfo::System::new_with_specifics(refresh_kind);
 
@@ -181,9 +207,10 @@ async fn memory_watch_future(pid: i32, memory_limit: u64, peak_memory: Arc<RwLoc
             Some(memory_usage) => {
                 let current_memory = memory_usage.memory();
 
-                let mut memory = peak_memory.write().unwrap();
-                *memory = max(current_memory, *memory);
-                drop(memory);
+                {
+                    let mut memory = peak_memory.write().unwrap();
+                    *memory = max(current_memory, *memory);
+                }
 
                 if current_memory > memory_limit {
                     return consts::STATUS_MLE;
@@ -207,8 +234,7 @@ mod tests {
         let exec_command = format!("[\"./test/{}.o\"]", filename);
 
         env::set_var("DEV", "1");
-        let test_result = start_test(2, 1000, 128 * 1024,
-                                     exec_command, true).await;
+        let test_result = start_test(2, 1000, 128 * 1024, exec_command, true).await;
 
         assert_eq!(test_result.len(), 2);
         for one_case in test_result.iter() {
