@@ -1,10 +1,9 @@
-use std::fs;
-use std::fs::File;
-use std::io;
-use std::io::Write;
-use std::os::unix::fs::PermissionsExt;
-
-use super::path;
+use crate::utils::path;
+use std::{
+    fs::{self, File},
+    io::{self, Write},
+    os::unix::fs::PermissionsExt,
+};
 
 pub fn exist(path: &str) -> bool {
     let metadata = fs::metadata(path);

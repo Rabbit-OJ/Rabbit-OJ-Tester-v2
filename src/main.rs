@@ -1,18 +1,23 @@
-use futures::future;
-use futures::future::FutureExt;
-use nix::sys::signal::{self, Signal};
-use nix::unistd::{setpgid, Pid};
-use std::env;
-use std::os::unix::process::CommandExt;
-use std::process::{Child, Command};
-use std::sync::{Arc, RwLock};
-use std::time::Duration;
+use futures::future::{self, FutureExt};
+use nix::{
+    sys::signal::{self, Signal},
+    unistd::{setpgid, Pid},
+};
+use std::{
+    cmp::max,
+    env,
+    os::unix::process::CommandExt,
+    process::{Child, Command},
+    sync::{Arc, RwLock},
+    time::Duration,
+};
 use sysinfo::{ProcessExt, SystemExt};
-
-use std::cmp::max;
 use types::TestResult;
-use utils::file::{create_stdout_file, open_stdin_file, write_result_file};
-use utils::{consts, file, time};
+use utils::{
+    consts,
+    file::{self, create_stdout_file, open_stdin_file, write_result_file},
+    time,
+};
 
 mod checks;
 mod types;
@@ -188,7 +193,7 @@ async fn main_future(mut child_process: Child) -> &'static str {
 }
 
 async fn time_watch_future(time_limit: u64) -> &'static str {
-    tokio::time::delay_for(Duration::from_millis(time_limit)).await;
+    tokio::time::sleep(Duration::from_millis(time_limit)).await;
     return consts::STATUS_TLE;
 }
 
@@ -222,13 +227,13 @@ async fn memory_watch_future(
             }
         }
 
-        tokio::time::delay_for(Duration::from_millis(50)).await;
+        tokio::time::sleep(Duration::from_millis(50)).await;
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::*;
 
     async fn test_executor(filename: &str, eq_status: &'static str) {
         let exec_command = format!("[\"./test/{}.o\"]", filename);
@@ -242,22 +247,22 @@ mod tests {
         }
     }
 
-    #[tokio::test(threaded_scheduler)]
+    #[tokio::test]
     async fn test_tle() {
         test_executor("tle", consts::STATUS_TLE).await;
     }
 
-    #[tokio::test(threaded_scheduler)]
+    #[tokio::test]
     async fn test_mle() {
         test_executor("mle", consts::STATUS_MLE).await;
     }
 
-    #[tokio::test(threaded_scheduler)]
+    #[tokio::test]
     async fn test_ok() {
         test_executor("ok", consts::STATUS_OK).await;
     }
 
-    #[tokio::test(threaded_scheduler)]
+    #[tokio::test]
     async fn test_re() {
         test_executor("re", consts::STATUS_RE).await;
     }
